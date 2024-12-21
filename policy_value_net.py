@@ -4,7 +4,6 @@
 
 import numpy as np
 import tensorflow as tf
-tf.compat.v1.disable_eager_execution()
 import os
 
 class PolicyValueNet():
@@ -19,7 +18,7 @@ class PolicyValueNet():
 
         # Define the tensorflow neural network
         # 1. Input:
-        self.input_states = tf.compat.v1.placeholder(
+        self.input_states = tf.placeholder(
                 tf.float32, shape=[None, 4, board_height, board_width])   # mini-batch, 4, board_height, board_width
         self.input_state = tf.transpose(self.input_states, [0, 2, 3, 1])  # NHWC 输入格式
         # 2. Common Networks Layers

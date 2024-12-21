@@ -3,9 +3,7 @@
 # Time  : 2018.7.7
 
 import numpy as np
-import copy, pprint, pickle, sys
-from policy_value_net import PolicyValueNet
-from game import Board
+import copy, pprint
 
 def softmax(x):
     probs = np.exp(x - np.max(x))
@@ -60,7 +58,7 @@ class TreeNode:
         """
         # Count visit.
         self._n_visits += 1
-        # Update Q, a running average of values for all visits.
+        # Update Q, a running average of values for all visits.   wtf ??? this line is rigth but kind of wired !
         self._Q += 1.0 * (leaf_value - self._Q) / self._n_visits
 
     def update_recursive(self, leaf_value):
@@ -160,20 +158,6 @@ class MCTS:
 
         return acts, act_probs
 
-    def cheating_move(self, qq, state, temp=1e-3):
-        '''
-        This is the cheating function try to add the simulation in oppo's time
-        Only add the number of the simulation, do not need to return other paramenters
-        '''
-        flag = qq.get()
-        # print('Begin to auto simulation ...', self._root._n_visits)
-        while flag:
-            state_copy = copy.deepcopy(state)
-            self._playout(state_copy)
-            qq.put(True)
-            flag = qq.get()
-        # print('End to auto simlulation ...', self._root._n_visits)
-
     def update_with_move(self, point, last_move):
         """
         Step forward in the tree, keeping everything we already know
@@ -183,7 +167,7 @@ class MCTS:
             # reset the tree
             self._root = TreeNode(None, 1.0)
         else:
-            if last_move in self._root._children[point]:
+            if last_move in self._root._children:
                 self._root = self._root._children[point][last_move]
                 self._root._parent = None
             else:
@@ -212,99 +196,10 @@ class MCTSPlayer:
         # print("collect the oppo point and move", point, move)
         self.mcts.update_with_move(point, move)
 
-    def haveto(self, board):
-        move_index, moves = board.get_avaiable_moves()
-        # one step to win
-        for move in moves:
-            bx, by, dx, dy = board.move_to_location(move)
-            if board.turn == 1:
-                if dx == 4 and dy == 4: return move
-                if len(board.blue_pieces) == 1 and board.map[dx][dy] < 0: return move
-            elif board.turn == 2:
-                if dx == 0 and dy == 0: return move
-                if len(board.red_pieces) == 1 and board.map[dx][dy] > 0: return move
-
-        # one step to lose
-        for move in moves:
-            bx, by, dx, dy = board.move_to_location(move)
-            if board.turn == 1:
-                if board.map[dx][dy] < 0:
-                    if dx == 1 and dy == 1: return move
-                    elif dx == 1 and dy == 0: return move
-                    elif dx == 0 and dy == 1: return move
-            elif board.turn == 2:
-                if board.map[dx][dy] > 0:
-                    if dx == 3 and dy == 3: return move
-                    elif dx == 3 and dy == 4: return move
-                    elif dx == 4 and dy == 3: return move
-        '''            
-        if board.turn == 1:
-            # 一步之后对手可以无法被歼灭并且十分靠近我方终点并且走子概率很高
-            for move in moves:
-                bx, by, dx, dy = board.move_to_location(move)
-                if board.map[dx][dy] < 0:
-                    for deltax, deltay in [(-1, -1), (-1, 0), (0, -1)]:
-                        ddx = dx + deltax if dx + deltax >= 0 else 0
-                        ddy = dy + deltay if dy + deltay >= 0 else 0
-                        # 查询 ddx, ddy 该点是否为蓝棋的不可歼灭点
-                        flag = True
-                        for i in range(ddx + 1):
-                            for j in range(ddy + 1):
-                                if i == bx and j == by: continue
-                                if board.map[i][j] > 0:
-                                    flag = False
-                                    break
-                            if not flag: break
-                        if flag:
-                            # ddx, ddy 不可歼灭
-                            print("Hidden have to move has been activated !")
-                            return move
-        elif board.turn == 2:
-            # 一步之后我方可以无法被歼灭并且十分的靠近敌方终点并且走子概率很高
-            for move in moves:
-                bx, by, dx, dy = board.move_to_location(move)
-                if board.map[dx][dy] > 0:
-                    for deltax, deltay in [(1, 1), (1, 0), (0, 1)]:
-                        ddx = dx + deltax if dx + deltax <= 4 else 4
-                        ddy = dy + deltay if dy + deltay <= 4 else 4
-                        flag = True
-                        for i in range(ddx, 5):
-                            for j in range(ddy, 5):
-                                if i == bx and j == by: continue
-                                if board.map[i][j] < 0:
-                                    flag = False
-                                    break
-                            if not flag: break
-                        if flag:
-                            print("Hidden have to move has been activated !")
-                            return move
-        '''
-
-        return None
-
     def get_action(self, board, temp=1e-3, return_prob = 0):
-        # get the point for the turns
-        while True:
-            try:
-                point = int(input("Input point (1~6): "))
-                if point <= 0 or point > 6: raise Exception()
-                break
-            except KeyboardInterrupt:
-                exit(1)
-            except:
-                print('Please input the right point to move !')
-        
+        # get the point for the turn
         board.get_point()
-        print(board.point)
-        # ipdb.set_trace()
-
-        # have to 
-        move = self.haveto(board)
-        if move:
-            print('Have to function has been activated !')
-            if return_prob: return move, 1
-            else: return move
-
+        # print(board.point)
         acts, probs = self.mcts.get_move_probs(board, temp)    # 获得确定的点数下的走法及其对应的概率
 
         # create the size 56 mcts_probs
@@ -325,11 +220,7 @@ class MCTSPlayer:
         else:
             # with the default temp=1e-3, it is almost equivalent
             # to choosing the move with the highest prob
-
-            # 选择最大概率的走子方案
             move = np.random.choice(acts, p = probs)
-            # move = acts[np.argmax(probs)]
-
             # reset the root node
             # self.mcts.update_with_move(-1, -1)
             

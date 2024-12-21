@@ -4,7 +4,7 @@
 
 import numpy as np
 from collections import deque
-import random, time, queue, threading
+import random, time
 
 class Board:
     def __init__(self):
@@ -83,30 +83,12 @@ class Board:
         self.map = [[0, 0, 0, 0, 0] for _ in range(5)]
         self.red_pieces = [1, 2, 3, 4, 5, 6]
         self.blue_pieces = [1, 2, 3, 4, 5, 6]
+
         if not red_pieces:
-            # red_pieces = [(0, 0, 3), (0, 1, 5), (0, 2, 6), (1, 0, 1), (1, 1, 4), (2, 0, 2)]
-            red_pieces = [(0, 0, 1), (0, 1, 6), (0, 2, 2), (1, 0, 5), (1, 1, 3), (2, 0, 4)]
+            red_pieces = [(0, 0, 3), (0, 1, 5), (0, 2, 6), (1, 0, 1), (1, 1, 4), (2, 0, 2)]
         if not blue_pieces:
             blue_pieces = [(4, 4, 3), (3, 4, 5), (2, 4, 6), (4, 3, 1), (3, 3, 4), (4, 2, 2)]
-
-        '''
-        # add the TUI to fix the position of the chess point
-        red_pieces, blue_pieces = [], []
-        print('Input Red Chess Position (follow the order of the number): ')
-        for i in range(1, 7):
-            position = input('Position ' + str(i) + ': ')
-            xxx, yyy = map(int, position.split(','))
-            red_pieces.append((xxx, yyy, i))
-
-        print('Input Blue Chess Position (follow the order of the number): ')
-        for i in range(1, 7):
-            position = input('Position ' + str(i) + ': ')
-            xxx, yyy = map(int, position.split(','))
-            blue_pieces.append((xxx, yyy, i))
-
-        print('-' * 50)
-        '''
-
+        
         # for log
         self.mine_pos, self.oppo_pos = red_pieces, blue_pieces
 
@@ -209,7 +191,6 @@ class Board:
 class Game:
     def __init__(self):
         self.board = Board()
-        self.q = queue.Queue()
     
     def show(self):
         # terminal
@@ -237,31 +218,12 @@ class Game:
             # if self.board.turn == 1: print('-------------------\nRed player play ...')
             # else: print('-------------------\nBlue player play ...')
             player_in_turn = players[self.board.turn]
-            
-            # IF NOT THE ALPHAZERO, MULTITHREADING TO SIMULATION
-            if player_in_turn.name == "human":
-                # the human or the pure mcts play turn
-                alphaplayer = players[2 if player_in_turn.color == 1 else 1]
-                self.q.put(True)
-                self.cheating = threading.Thread(target = alphaplayer.mcts.cheating_move, \
-                        args = (self.q, self.board,))
-                self.cheating.start()
-                # print('Start simulation ... ')
-            else:
-                # add the False flag into the threading queue
-                # to stop the auto simulations
-                self.q.put(False)
-                try:
-                    self.cheating.join()
-                    # print('End simulation ... ')
-                except:
-                    pass
 
             # get_action must call the get_point function
             move = player_in_turn.get_action(self.board)    # the move is the integar
 
             # alphazero collect oppo's movement
-            if player_in_turn.name == "human":
+            if player_in_turn.name != 'alphazero':
                 # the human or the pure mcts play turn
                 alphazero_player = players[1] if player_in_turn.color == 2 else players[2]
                 if alphazero_player.name != 'alphazero': 
@@ -278,21 +240,20 @@ class Game:
                 self.write_log(players[start_player].name, players[1 if start_player == 2 else 2].name,\
                         players[winner].name)
                 if is_show: print('red win' if winner == 1 else 'blue win')
-                self.q.put(False)
-                self.cheating.join()
                 return winner
         
     def write_log(self, first_name, second_name, winner):
         # this function when the start_play end and write the log according to the new rule of the game
         filename = './chess_log/WTN-' + first_name + '-' + second_name + '-' + winner + '-' + '-'.join(time.asctime().split()) + '-' + '2018CCGC'
         with open(filename, 'w') as f:
-            f.write('#[][place][][date][];\n')
-            f.write('R:')
+            f.write(filename)
+            f.write('\n')
+            f.write('R: ')
             for x, y, index in self.board.mine_pos:
                 x, y = 5 - x, chr(65 + y)
                 f.write(y + str(x) + '-' + str(index) + ';')
             f.write('\n')
-            f.write('B:')
+            f.write('B: ')
             for x, y, index in self.board.oppo_pos:
                 x, y = 5 - x, chr(65 + y)
                 f.write(y + str(x) + '-' + str(index) + ';')

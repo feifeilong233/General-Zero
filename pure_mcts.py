@@ -174,14 +174,6 @@ class MCTS:
         return max(self._root._children[state.point].items(),
                    key=lambda act_node: act_node[1]._n_visits)[0]
 
-    def cheating_move(self, qq, state, temp=1e-3):
-        flag = qq.get()
-        while flag:
-            state_copy = copy.deepcopy(state)
-            self._playout(state_copy)
-            qq.put(True)
-            flag = qq.get()
-    
     def update_with_move(self, point, last_move):
         """
         Step forward in the tree, keeping everything we already know
@@ -209,7 +201,6 @@ class MCTSPlayer(object):
 
     def get_action(self, board):
         board.get_point()
-        print(board.point)
         move = self.mcts.get_move(board)
         self.mcts.update_with_move(-1, -1)
         return move
