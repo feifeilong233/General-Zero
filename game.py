@@ -89,6 +89,7 @@ class Board:
         if not blue_pieces:
             blue_pieces = [(4, 4, 3), (3, 4, 5), (2, 4, 6), (4, 3, 1), (3, 3, 4), (4, 2, 2)]
 
+        '''
         # add the TUI to fix the position of the chess point
         red_pieces, blue_pieces = [], []
         print('Input Red Chess Position (follow the order of the number): ')
@@ -104,6 +105,7 @@ class Board:
             blue_pieces.append((xxx, yyy, i))
 
         print('-' * 50)
+        '''
 
         # for log
         self.mine_pos, self.oppo_pos = red_pieces, blue_pieces
